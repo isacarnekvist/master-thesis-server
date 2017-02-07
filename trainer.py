@@ -63,7 +63,7 @@ class Trainer():
                 Y = R + self.gamma * self.nn.v.predict(Xp)
                 [exp_node.set_value(abs(e) + self.epsilon) for exp_node, e in zip(exp_nodes, Y[:, 0])]
                 self.nn.q.fit([X, U], Y, verbose=0)
-                if datetime.now() > latest_training_log + timedelta(seconds=10):
+                if datetime.now() > latest_training_log + timedelta(seconds=60):
                     self.logger.info('Training - Current number of samples: {}'.format(self.priority_buffer.size))
                     latest_training_log = datetime.now()
 
