@@ -16,6 +16,8 @@ logger = logging.getLogger('werkzeug')
 logger.setLevel(logging.WARNING)
 
 app = flask.Flask(__name__)
+experience_queue = Queue()
+trainer = Trainer(experience_queue)
 
 
 @app.route('/')
@@ -25,6 +27,7 @@ def hello():
 
 @app.route('/get_params', methods=['GET'])
 def get_params():
+    global trainer
     params = trainer.nn.q.get_weights()
     return flask.jsonify([np.ndarray.tolist(param) for param in params])
 
@@ -35,20 +38,12 @@ def put_experience():
     return flask.make_response('OK', 200)
 
 
-def start_trainer():
-    global trainer
-    trainer = Trainer(experience_queue)
-    trainer.start()
-
-
 if __name__ == '__main__':
-    trainer = None
-    experience_queue = Queue()
-    t = threading.Thread(target=start_trainer)
+    t = threading.Thread(target=trainer.start)
     t.do_run = True
     t.start()
     try:
-        app.run()
+        app.run(host='0.0.0.0')
     except:
         pass
     t.do_run = False

@@ -21,7 +21,7 @@ class Trainer():
         logcolor.basic_config(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
         self.nn = NNet(x_size=(3 + 2), u_size=3)
-        self.batch_size = 4
+        self.batch_size = 512
         self.is_aborted = False
         self.experience_queue = experience_queue
         self.priority_buffer = PriorityBuffer(max_size=2 ** 17) # approx. 131000
@@ -63,7 +63,7 @@ class Trainer():
                 Y = R + self.gamma * self.nn.v.predict(Xp)
                 [exp_node.set_value(abs(e) + self.epsilon) for exp_node, e in zip(exp_nodes, Y[:, 0])]
                 self.nn.q.fit([X, U], Y, verbose=0)
-                if datetime.now() > latest_training_log + timedelta(seconds=60):
+                if datetime.now() > latest_training_log + timedelta(seconds=10):
                     self.logger.info('Training - Current number of samples: {}'.format(self.priority_buffer.size))
                     latest_training_log = datetime.now()
 
