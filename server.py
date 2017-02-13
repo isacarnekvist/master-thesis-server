@@ -1,4 +1,5 @@
 import sys
+import pickle
 import logging
 import threading
 from time import sleep
@@ -18,6 +19,7 @@ logger.setLevel(logging.WARNING)
 app = flask.Flask(__name__)
 experience_queue = Queue()
 trainer = Trainer(experience_queue)
+test_trials = []
 
 
 @app.route('/')
@@ -38,7 +40,25 @@ def put_experience():
     return flask.make_response('OK', 200)
 
 
+@app.route('/put_test_trial', methods=['PUT'])
+def put_test_trial():
+    test_trials.append(flask.request.get_json())
+    with open('test_trials.pkl', 'wb') as f:
+        pickle.dump(test_trials, f)
+    return flask.make_response('OK', 200)
+
+
+@app.route('/get_test_trials', methods=['GET'])
+def get_test_trials():
+    return flask.jsonify(test_trials)
+
+
 if __name__ == '__main__':
+    try:
+        with open('test_trials.pkl', 'rb') as f:
+            test_trials = pickle.load(f)
+    except:
+        pass
     t = threading.Thread(target=trainer.start)
     t.do_run = True
     t.start()

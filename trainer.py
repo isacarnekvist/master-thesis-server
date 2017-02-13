@@ -1,4 +1,5 @@
 import sys
+import pickle
 import logging
 import threading
 from time import sleep
@@ -20,11 +21,21 @@ class Trainer():
     def __init__(self, experience_queue):
         logcolor.basic_config(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
-        self.nn = NNet(x_size=(3 + 2), u_size=3)
+        self.nn = NNet(x_size=(2 + 2), u_size=2)
         self.batch_size = 512
         self.is_aborted = False
         self.experience_queue = experience_queue
-        self.priority_buffer = PriorityBuffer(max_size=2 ** 17) # approx. 131000
+        try:
+            with open('params.pkl', 'rb') as f:
+                self.nn.q.set_weights(pickle.load(f))
+        except Exception as e:
+            self.logger.warning('Could not load params: {}'.format(e))
+        try:
+            with open('priority_buffer.pkl', 'rb') as f:
+                self.priority_buffer = pickle.load(f)
+        except Exception as e:
+            self.priority_buffer = PriorityBuffer(max_size=2 ** 17) # approx. 131000
+            self.logger.warning('Could not load priority buffer, creating new one')
 
         # nn/rl parameters
         self.gamma = 0.98  # discount factor
@@ -62,10 +73,16 @@ class Trainer():
                     R[i, :] = sample.data['r']
                 Y = R + self.gamma * self.nn.v.predict(Xp)
                 [exp_node.set_value(abs(e) + self.epsilon) for exp_node, e in zip(exp_nodes, Y[:, 0])]
-                self.nn.q.fit([X, U], Y, verbose=0)
                 if datetime.now() > latest_training_log + timedelta(seconds=10):
+                    self.nn.q.fit([X, U], Y, verbose=1)
                     self.logger.info('Training - Current number of samples: {}'.format(self.priority_buffer.size))
                     latest_training_log = datetime.now()
+                    with open('params.pkl', 'wb') as f:
+                        pickle.dump(self.nn.q.get_weights(), f)
+                    with open('priority_buffer.pkl', 'wb') as f:
+                        pickle.dump(self.priority_buffer, f)
+                else:
+                    self.nn.q.fit([X, U], Y, verbose=0)
 
 
     def stop(self):
